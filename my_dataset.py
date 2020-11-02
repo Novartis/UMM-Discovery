@@ -13,7 +13,7 @@
 # limitations under the License.
 
 from torch.utils.data import Dataset
-import skimage.external.tifffile as sktiff
+from PIL import Image
 import pandas as pd
 import os
 import numpy as np
@@ -39,15 +39,22 @@ class bbbc021_dataset(Dataset):
 
         self.imgs = []
         for row in range(len(self.df)):
-            img_name = os.path.join(self.root_dir, self.df['pseudoclass'].iloc[row], self.df['filename'].iloc[row])
+            img_name_ch1 = os.path.join(self.root_dir, self.df['plate'].iloc[row], self.df['filename_dna'].iloc[row])
+            img_name_ch2 = os.path.join(self.root_dir, self.df['plate'].iloc[row], self.df['filename_tubulin'].iloc[row])
+            img_name_ch3 = os.path.join(self.root_dir, self.df['plate'].iloc[row], self.df['filename_actin'].iloc[row])
             label = self.class_to_idx[self.df[label_header].iloc[row]]
-            item = (img_name, label)
+            item = (img_name_ch1, img_name_ch2, img_name_ch3, label)
             self.imgs.append(item)
 
     def __getitem__(self, index):
-        img_name, label = self.imgs[index]
-
-        image = sktiff.imread(img_name).astype('float32')
+        img_name_ch1, img_name_ch2, img_name_ch3, label = self.imgs[index]
+        img1 = np.asarray(Image.open(img_name_ch1))
+        img2 = np.asarray(Image.open(img_name_ch2))
+        img3 = np.asarray(Image.open(img_name_ch3))
+        image = np.zeros((img1.shape[0], img1.shape[1], 3), dtype='float')
+        image[:,:,0] = img1.copy()
+        image[:,:,1] = img2.copy()
+        image[:,:,2] = img3.copy()
 
         if self.transform:
             image = self.transform(image)
